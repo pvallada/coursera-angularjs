@@ -1,84 +1,81 @@
 (function () {
     'use strict';
-  angular.module('ShoppingListCheckOff', [])
-      .controller('ToBuyController', ToBuyController)
-      .controller('AlreadyBoughtController', AlreadyBoughtController)
-      .service('ShoppingListCheckOffService', ShoppingListCheckOffService);
 
-    ToBuyController.$inject = ['ShoppingListCheckOffService'];
-    function ToBuyController(ShoppingListCheckOffService) {
-        var toBuyCtrl = this;
+    angular.module('NarrowItDownApp', [])
+        .controller('NarrowItDownController', NarrowItDownController)
+        .service('MenuSearchService', MenuSearchService)
+        .constant('ApiBasePath', "https://davids-restaurant.herokuapp.com")
+        .directive('foundItems', FoundItemsDirective);
 
-        toBuyCtrl.itemName = "";
-        toBuyCtrl.itemQuantity = "";
+    function FoundItemsDirective() {
+        var ddo = {
+            templateUrl: 'foundItems.html',
+            scope: {
+                items: '<',
+                onRemove: '&'
+            },
+            controller: FoundItemsDirectiveController,
+            controllerAs: 'list',
+            bindToController: true
+        };
+        return ddo;
+    }
 
-        toBuyCtrl.addItem = function () {
-            ShoppingListCheckOffService.addItemtoBuy(toBuyCtrl.itemName, toBuyCtrl.itemQuantity);
+
+    function FoundItemsDirectiveController() {
+        var list = this;
+
+        list.itemsFound = function () {
+            if ( list.items != undefined && list.items.length > 0 ){
+                return true;
+            }
+            else{
+                return false;
+            }
+        };
+    }
+
+    NarrowItDownController.$inject = ['MenuSearchService'];
+    function NarrowItDownController(MenuSearchService) {
+        var menu = this;
+        menu.searchTerm = "";
+        menu.getMatchedMenuItems = function () {
+            if (menu.searchTerm === "") {
+                menu.found = [];
+            }
+            else {
+                var promise = MenuSearchService.getMatchedMenuItems(menu.searchTerm);
+                promise.then(function (result) {
+                menu.found = result;
+            })
         }
-        toBuyCtrl.removeItem = function (itemIndex) {
-            ShoppingListCheckOffService.removeToBuyItem(itemIndex);
         };
-        toBuyCtrl.items = ShoppingListCheckOffService.getToBuyItems();
-    }
-
-
-    AlreadyBoughtController.$inject = ['ShoppingListCheckOffService'];
-    function AlreadyBoughtController(ShoppingListCheckOffService) {
-        var bougthListCtrl = this;
-
-        bougthListCtrl.items = ShoppingListCheckOffService.getBoughtItems();
-        bougthListCtrl.removeItem = function (itemIndex) {
-            ShoppingListCheckOffService.removeBoughtItem(itemIndex);
+        menu.removeItem = function (itemIndex) {
+            menu.found.splice(itemIndex, 1);
         };
     }
 
 
-    function ShoppingListCheckOffService() {
+    MenuSearchService.$inject = ['$http', 'ApiBasePath'];
+    function MenuSearchService($http, ApiBasePath) {
         var service = this;
-
-        // List of items to buy
-        var toBuy = [ {name:'Cookies', quantity:5}, {name: 'bottle of juice', quantity:3},{name: 'Candy', quantity:8}, {name: 'Package of milk', quantity:3},{name: 'Flour', quantity:7}];
-        // List of bought items
-        var bought = [];
-
-        // function to add items to buy
-        service.addItemtoBuy = function (itemName, quantity) {
-            var item = {
-                name: itemName,
-                quantity: quantity
-            };
-            toBuy.push(item);
-        };
-
-        service.removeToBuyItem = function (itemIndex) {
-            // get the item before deleting it
-            var item = toBuy[itemIndex];
-            // remove the item from to buy list
-            toBuy.splice(itemIndex, 1);
-            // call the service to add item to the bought list
-            service.addItemtoBoughtList(item.name,item.quantity);
-        };
-
-        // function to return the list of items to buy
-        service.getToBuyItems = function () {
-            return toBuy;
-        };
-
-        // function to add items that were bought
-        service.addItemtoBoughtList = function (itemName, quantity) {
-            var item = {
-                name: itemName,
-                quantity: quantity
-            };
-            bought.push(item);
-        };
-        service.removeBoughtItem = function (itemIdex) {
-            bought.splice(itemIdex, 1);
-        };
-        // function to return the list of bought items
-        service.getBoughtItems = function () {
-            return bought;
-        };
+        service.getMatchedMenuItems = function(searchTerm){
+            return $http({
+                method: "GET",
+                url: (ApiBasePath + "/menu_items.json")
+            }).then(function (result) {
+                var foundItems = [];
+                // traverse the menu_items array
+                for ( var index = 0; index < result.data.menu_items.length; index++){
+                    if ( result.data.menu_items[index].description.search(searchTerm.toLowerCase()) != -1 ) {
+                        foundItems.push(result.data.menu_items[index]);
+                        console.log(result.data.menu_items[index].description);
+                    }
+                }
+                // return processed items
+                return foundItems;
+            });
+       };
     }
 
 })();

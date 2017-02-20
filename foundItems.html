@@ -1,0 +1,19 @@
+<div id="items-found">
+<div id="result" ng-show="list.itemsFound()">
+<table class="form-group table responsive result-table" border="1"  >
+    <tr>
+        <th>Name</th>
+        <th>Short Name</th>
+        <th>Description</th>
+        <th>Narrow Search</th>
+    </tr>
+    <tr ng-repeat="item in list.items">
+        <td>{{item.name}}</td>
+        <td>{{item.short_name}}</td>
+        <td>{{item.description}}</td>
+        <td><button ng-click="list.onRemove({index: $index});"class="btn btn-primary">Don't want this one!</button></td>
+    </tr>
+</table>
+</div>
+<div class="error" ng-hide="list.itemsFound()">Nothing found!</div>
+</div>
